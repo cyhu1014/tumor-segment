@@ -140,3 +140,17 @@ def cut_feat_gt (feat, gt,x,y,z):
     feat_cut = feat[:,:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
     gt_cut   = gt[:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
     return feat_cut , gt_cut
+
+def cut_feat (feat,x,y,z):
+    half_x_length = x//2 
+    half_y_length = y//2 
+    half_z_length = z//2 
+    mid_x = np.random.randint(x//2,feat.shape[2]-x//2)
+    mid_y = np.random.randint(y//2,feat.shape[3]-y//2)
+    mid_z = np.random.randint(z//2,feat.shape[4]-z//2)
+    # print(mid_x,mid_y,mid_z)
+    feat_cut = feat[:,:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
+    return feat_cut 
+
+def yyyxxs ():
+    return 0
