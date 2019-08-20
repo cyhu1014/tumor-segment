@@ -31,7 +31,7 @@ model_name = 'infogan'
 os.makedirs(abs_path+model_name,exist_ok=True)
 checkpoint_path =abs_path+model_name+'/'+model_name
 start_epoch = 0
-b_size = 4
+b_size = 8
 workers = 2
 classes = 5
 x = 64 ; y = 64 ; z = 64
@@ -151,6 +151,8 @@ def train () :
             D_losses.append(errD.item())
             G_loss+=errG.item()
             D_loss+=errD.item()
+        G_loss/=len(dataloader)
+        D_loss/=len(dataloader)
         if(D_loss<best_D_loss):
             best_D_loss = D_loss
             best_d_epoch = epoch
