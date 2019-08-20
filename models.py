@@ -321,4 +321,45 @@ class UNet3d_vae_2 (nn.Module):
         return z , mu, logvar
 
 
-
+ngf = 64
+nz  = 1000
+nc  = 4
+b_size = 4
+class Generator(nn.Module):
+    def __init__(self):
+        super(Generator,self).__init__()
+        self.main = nn.Sequential(
+            # input is Z, going into a convolution
+            nn.ConvTranspose3d(nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.ReLU(True),
+            nn.Conv3d(ngf * 8, ngf * 8, 3, padding=1),
+            nn.BatchNorm3d(ngf *8 ),
+            nn.ReLU(True),
+            # state size. (ngf*8) x 4 x 4
+            nn.ConvTranspose3d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.ReLU(True),
+            nn.Conv3d(ngf * 4, ngf * 4, 3, padding=1),
+            nn.BatchNorm3d(ngf * 4),
+            nn.ReLU(True),
+            # state size. (ngf*4) x 8 x 8
+            nn.ConvTranspose3d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.ReLU(True),
+            nn.Conv3d(ngf * 2, ngf * 2, 3, padding=1),
+            nn.BatchNorm3d(ngf * 2),
+            nn.ReLU(True),
+            # state size. (ngf*2) x 16 x 16
+            nn.ConvTranspose3d( ngf * 2, ngf, 4, 2, 1, bias=False),
+            nn.ReLU(True),
+            nn.Conv3d(ngf , ngf , 3, padding=1),
+            nn.BatchNorm3d(ngf),
+            nn.ReLU(True),
+            nn.ConvTranspose3d( ngf, nc, 4, 2, 1, bias=False),
+            nn.Tanh()
+        )
+    def forward(self, input):
+        return self.main(input)
+G = Generator()
+nois = np.linspace(-2, 2, b_size*nz).reshape(1, -1)
+nois = torch.from_numpy(nois).float()
+nois = nois.view(b_size,-1, 1, 1, 1)
+f = G(nois)
