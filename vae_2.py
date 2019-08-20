@@ -64,4 +64,4 @@ for epoch in range (start_epoch , n_epochs):
         # best_loss = n_loss
     save_checkpoint('%s_epoch%d.pth'%(checkpoint_path,epoch+1) ,model ,optimizer )
         # print("save best at epoch:" ,epoch+1)
-save_checkpoint('final_%s.pth'%checkpoint_path ,model ,optimizer )
+save_checkpoint('final_%s.pth'%checkpoint_path ,model ,optimizer )zs

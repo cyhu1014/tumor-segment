@@ -31,7 +31,7 @@ model_name = 'infogan'
 os.makedirs(abs_path+model_name,exist_ok=True)
 checkpoint_path =abs_path+model_name+'/'+model_name
 start_epoch = 7
-batch_size = 4
+b_size = 4
 workers = 2
 classes = 5
 x = 64 ; y = 64 ; z = 64
@@ -39,7 +39,7 @@ n_epochs = 100
 times = 4
 num_epochs = 100 
 train_set = tumor_dataset(path = train_path,out_index=train_index)
-train_loader = DataLoader(train_set, batch_size=batch_size,shuffle=False, num_workers=workers)
+train_loader = DataLoader(train_set, batch_size=b_size,shuffle=False, num_workers=workers)
 dataloader = train_loader
 ngf = 64
 ndf = 64
@@ -92,7 +92,7 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             # state size. (ndf*8) x 4 x 4
             nn.Conv3d(ndf * 8, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
+            nn.Sigmoid()    
         )
     def forward(self, input):
         return self.main(input)
@@ -120,19 +120,71 @@ fake_label = 0
 G_losses = []
 D_losses = []
 
+netG.cuda()
+netD.cuda()
+netG.train()
+netD.train()
+best_G_loss = np.inf
+best_D_loss = np.inf
 
-for epoch in range(num_epochs):
+
+'''for epoch in range(num_epochs):
     # For each batch in the dataloader
+    D_loss = 0
+    G_loss = 0
     for i, data in enumerate(dataloader, 0):
-        c = np.linspace(-2, 2, 10).reshape(1, -1)
-        c = np.repeat(c, 10, 0).reshape(-1, 1)
-        c = torch.from_numpy(c).float()
-        c = c.view(-1, 1, 1, 1)
-        c =torch.unsqueeze(c,0)
+        print(i,end='\r')
         netD.zero_grad()
-        real_cpu = data[0]
-        print(real_cpu.shape)
+        real_cpu = data[0].cuda()
         real_cpu = cut_feat(real_cpu,64,64,64)
-        print(real_cpu.shape)
-        break
-    break
+        label = torch.full((b_size,), real_label ).cuda()
+        output = netD(real_cpu).view(-1)
+        errD_real = criterion(output, label)
+        errD_real.backward()
+        D_x = output.mean().item()
+        noise = np.linspace(-2, 2, b_size*100).reshape(1, -1)
+        noise = torch.from_numpy(noise).float()
+        noise = noise.view(b_size,-1, 1, 1, 1).cuda()
+        fake = netG(noise)
+        label.fill_(fake_label)
+        output = netD(fake.detach()).view(-1)
+        errD_fake = criterion(output, label)
+        errD_fake.backward()
+        D_G_z1 = output.mean().item()
+        errD = errD_real + errD_fake
+        optimizerD.step()
+
+        #-----netG
+        netG.zero_grad()
+        label.fill_(real_label)  # fake labels are real for generator cost
+        # Since we just updated D, perform another forward pass of all-fake batch through D
+        output = netD(fake).view(-1)
+        # Calculate G's loss based on this output
+        errG = criterion(output, label)
+        # Calculate gradients for G
+        errG.backward()
+        D_G_z2 = output.mean().item()
+        # Update G
+        optimizerG.step()
+        # Output training stats
+        if i % 10 == 0:
+            print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                  % (epoch, num_epochs, i, len(dataloader),
+                     errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+        
+        # Save Losses for plotting later
+        G_losses.append(errG.item())
+        D_losses.append(errD.item())
+        G_loss+=errG.item()
+        D_loss+=errD.item()
+    print(D_loss)
+    if(D_loss<best_D_loss):
+        best_D_loss = D_loss
+        print('best_D: ',D_loss)
+        save_checkpoint('best_D.pth',netD,optimizerD)
+    print(G_loss)
+    if(G_loss<best_G_loss):
+        best_G_loss = G_loss
+        print('best_G: ',G_loss)
+        save_checkpoint('best_G.pth',netG,optimizerG)'''
+
