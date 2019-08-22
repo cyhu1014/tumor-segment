@@ -291,11 +291,9 @@ class UNet3d_vae_2 (nn.Module):
         return mu + eps*std
 
     def forward(self, x):
-        #decoder part   
-        x1 = self.inc(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
+
+
+
         #segment part
         # out = self.up(x4)
         # out = torch.cat([out, x3], dim=1)
@@ -370,8 +368,47 @@ class Generator(nn.Module):
         )
     def forward(self, input):
         return self.main(input)
-G = Generator()
-nois = np.linspace(-2, 2, b_size*nz).reshape(1, -1)
-nois = torch.from_numpy(nois).float()
-nois = nois.view(b_size,-1, 1, 1, 1)
-f = G(nois)
+
+
+class model_bbox(nn.Module):
+    def __init__(self,b_size,n_channels):
+        super(model_bbox,self).__init__()
+        self.b_size = b_size
+        self.main = nn.Sequential(
+            nn.Conv3d(4,16, 3),
+            nn.BatchNorm3d(16),
+            nn.ReLU(),
+            nn.MaxPool3d(2),
+            nn.Conv3d(16,32, 3),
+            nn.BatchNorm3d(32),
+            nn.ReLU(),
+            nn.Conv3d(32,32, 3),
+            nn.BatchNorm3d(32),
+            nn.ReLU(),
+            nn.MaxPool3d(2),
+            nn.Conv3d(32,64, 3),
+            nn.BatchNorm3d(64),
+            nn.ReLU(),
+            nn.MaxPool3d(2),
+            nn.Conv3d(64,64, 3),
+            nn.BatchNorm3d(64),
+            nn.ReLU(),
+            nn.MaxPool3d(2),
+            nn.Conv3d(64,64, 3),
+            nn.BatchNorm3d(64),
+            nn.ReLU(),
+        )
+        self.flatten = nn.Sequential(
+            nn.Linear(32000,1024),
+            nn.ReLU(),
+            nn.Linear(1024,128),
+            nn.ReLU(),
+            nn.Linear(128,6),
+        )
+    def forward(self, input):
+        output = self.main(input)
+        output = output.view(self.b_size,-1)
+        output = self.flatten(output)
+        return output
+
+
