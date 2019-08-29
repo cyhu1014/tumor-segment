@@ -4,10 +4,10 @@ import torch
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
-def train(model,optimizer, dataloader ,criterion,checkpoint_path,x,y,z,n_epochs = 100 , times = 4 ,start_epoch = 0 ):
+def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,y,z,n_epochs = 100 , times = 1 ,start_epoch = 0 ):
     best_loss = np.inf
     model.train()
-
+    best_f1 = 0
     for epoch in range (start_epoch , n_epochs):
         n_loss = 0
         for i ,(feat,gt) in enumerate (dataloader):        
@@ -28,8 +28,10 @@ def train(model,optimizer, dataloader ,criterion,checkpoint_path,x,y,z,n_epochs 
         print("[%d/%d],loss : %.4f"%(epoch+1,n_epochs,n_loss),checkpoint_path)
         # if(n_loss <best_loss):
             # best_loss = n_loss
-        save_checkpoint('%s_epoch%d.pth'%(checkpoint_path,epoch+1) ,model ,optimizer )
-            # print("save best at epoch:" ,epoch+1)
+        f1_score = test2(model,valid_loader,240,240,155,x,y,z)
+        print(f1_score)
+        if(f1_score > best_f1):
+            
     save_checkpoint('final_%s.pth'%checkpoint_path ,model ,optimizer )
 
     
@@ -152,5 +154,54 @@ def cut_feat (feat,x,y,z):
     feat_cut = feat[:,:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
     return feat_cut 
 
-def yyyxxs ():
-    return 0
+def test2 (model , dataloader ,X,Y,Z, x, y ,z) :
+    model.eval()
+    macro_f1 = 0
+    with torch.no_grad():
+        for idx ,(feat,gt) in enumerate (dataloader):
+            feat = feat.cuda()
+            p = np.zeros((1,)) 
+            g = np.zeros((1,))
+            for i in range (0,X,x):
+                for j in range (0,Y,y):
+                    for k in range (0,Z,z):
+                        x1 = i
+                        cut_x1 = 0
+                        x2 = i+x
+                        if (x2>X):
+                            x2 = X
+                            tp_x1 = x1
+                            x1 = x2-x
+                            cut_x1 = tp_x1-x1
+                        y1 = j
+                        cut_y1 = 0
+                        y2 = j+y
+                        if (y2>Y):
+                            y2 = Y
+                            tp_y1 = y1
+                            y1 = y2-y
+                            cut_y1 = tp_y1-y1
+                        z1 = k
+                        cut_z1 = 0
+                        z2 = k+z
+                        if (z2>Z):
+                            z2 = Z
+                            tp_z1 = z1
+                            z1 = z2-z 
+                            cut_z1 = tp_z1-z1 
+                        feat_cut = feat[:,:,x1:x2,y1:y2,z1:z2]
+                        gt_cut = gt[:,x1:x2,y1:y2,z1:z2]
+                        pred = model(feat_cut)
+                        pred = torch.argmax(pred,1).cpu()
+                        pred  = pred[:,cut_x1:,cut_y1:,cut_z1:]
+                        gt_cut = gt_cut[:,cut_x1:,cut_y1:,cut_z1:]
+                        pred   = pred.numpy().reshape(-1)
+                        gt_cut = gt_cut.numpy().reshape(-1)
+                        p = np.concatenate((p,pred))       
+                        g = np.concatenate((g,gt_cut))  
+            p = p[1:]                                                                                   
+            g = g[1:]
+            macro_f1+=f1_score(g, p,average='macro')
+            print(idx, p.shape ,end='\r')
+        macro_f1 = macro_f1/len(dataloader)
+    return macro_f1
