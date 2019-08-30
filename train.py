@@ -8,6 +8,7 @@ def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,
     best_loss = np.inf
     model.train()
     best_f1 = 0
+    best_epoch = 0
     for epoch in range (start_epoch , n_epochs):
         n_loss = 0
         for i ,(feat,gt) in enumerate (dataloader):        
@@ -31,7 +32,10 @@ def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,
         f1_score = test2(model,valid_loader,240,240,155,x,y,z)
         print(f1_score)
         if(f1_score > best_f1):
-            
+            best_f1 = f1_score
+            best_epoch = epoch
+            save_checkpoint('best_%s.pth'%checkpoint_path ,model ,optimizer) 
+        print('[%d] : %.4f      --BEST--[%d] : %.4f                         '%(epoch,f1_score , best_epoch,epoch))
     save_checkpoint('final_%s.pth'%checkpoint_path ,model ,optimizer )
 
     
