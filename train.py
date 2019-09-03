@@ -34,9 +34,13 @@ def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,
         if(f1_score > best_f1):
             best_f1 = f1_score
             best_epoch = epoch
-            save_checkpoint('best_%s.pth'%checkpoint_path ,model ,optimizer) 
-        print('[%d] : %.4f      --BEST--[%d] : %.4f                         '%(epoch,f1_score , best_epoch,epoch))
-    save_checkpoint('final_%s.pth'%checkpoint_path ,model ,optimizer )
+            save_checkpoint('%s_best.pth'%checkpoint_path ,model ,optimizer) 
+        print('[%d] : %.4f      --BEST--[%d] : %.4f                         '%(epoch,f1_score , best_epoch,best_f1))
+        txt_path = '%s.csv'%checkpoint_path
+        text_file = open(txt_path, "a")
+        text_file.write( '%d,%.4f\n'%(epoch,f1_score))
+        text_file.close()
+        save_checkpoint('%s_final.pth'%checkpoint_path ,model ,optimizer )
 
     
 def test(model,dataloader,times= 8):
@@ -205,7 +209,8 @@ def test2 (model , dataloader ,X,Y,Z, x, y ,z) :
                         g = np.concatenate((g,gt_cut))  
             p = p[1:]                                                                                   
             g = g[1:]
-            macro_f1+=f1_score(g, p,average='macro')
-            print(idx, p.shape ,end='\r')
+            fs = f1_score(g, p,average='macro')
+            macro_f1+=fs
+            print(idx, p.shape ,fs,end='\r')
         macro_f1 = macro_f1/len(dataloader)
     return macro_f1
