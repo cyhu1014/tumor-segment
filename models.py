@@ -9,10 +9,10 @@ class double_conv(nn.Module):
         super(double_conv, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv3d(in_ch, out_ch, 3, padding=1),
-            nn.BatchNorm3d(out_ch),
+            nn.InstanceNorm3d(out_ch),
             nn.ReLU(inplace=True),
             nn.Conv3d(out_ch, out_ch, 3, padding=1),
-            nn.BatchNorm3d(out_ch),
+            nn.InstanceNorm3d(out_ch),
             nn.ReLU(inplace=True)
         )
     def forward(self, x):
