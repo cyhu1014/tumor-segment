@@ -12,7 +12,9 @@ def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,
     best_epoch = 0
     for epoch in range (start_epoch , n_epochs):
         n_loss = 0
-        for i ,(feat,gt) in enumerate (dataloader):        
+        for i ,data in enumerate (dataloader):       
+            feat = data[0]
+            gt     = data[1]
             # print(feat.shape,gt.shape)
             for idx in range (times):
                 feat_cut ,gt_cut = cut_feat_gt(feat,gt,x,y,z)                
@@ -41,6 +43,46 @@ def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,
         text_file = open(txt_path, "a")
         today =str(datetime.datetime.now())  
         text_file.write( '%d,%.4f,%s\n'%(epoch,f1_score,today))
+        text_file.close()
+        save_checkpoint('%s_final.pth'%checkpoint_path ,model ,optimizer )
+
+def train2(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,bbox_csv,x,y,z,n_epochs = 500 , times = 1 ,start_epoch = 0 ):
+    best_loss = np.inf
+    model.train()
+    best_f1 = 0
+    best_epoch = 0
+    for epoch in range (start_epoch , n_epochs):
+        n_loss = 0
+        for i ,data in enumerate (dataloader):        
+            feat = data[0]
+            gt     = data[1]
+            fp     = data[2]
+            feat_cut ,gt_cut = cut_feat_gt_with_bbox(feat,gt,fp,x,y,z,bbox_csv)                
+            feat_cut = feat_cut.cuda()
+            gt_cut   = gt_cut.cuda()
+            # print(feat_cut.shape,gt_cut.shape)
+            model.zero_grad()
+            pred = model(feat_cut)
+            loss = criterion(pred.double(),gt_cut)
+            loss.backward()
+            optimizer.step()
+            n_loss+=loss.item()
+            print("[%d/%d],[%d/%d],loss :%.4f"%(epoch+1,n_epochs,i+1,len(dataloader),loss.item()),end = "\r")
+        n_loss/=(len(dataloader))
+        print("[%d/%d],loss : %.4f"%(epoch+1,n_epochs,n_loss),checkpoint_path)
+        # if(n_loss <best_loss):
+            # best_loss = n_loss
+        f1_score , valid_loss = test_with_bbox(model,valid_loader,criterion,bbox_csv,240,240,155,x,y,z)
+        print(f1_score,valid_loss.item())
+        if(f1_score > best_f1):
+            best_f1 = f1_score
+            best_epoch = epoch
+            save_checkpoint('%s_best.pth'%checkpoint_path ,model ,optimizer) 
+        print('[%d] : %.4f      --BEST--[%d] : %.4f                         '%(epoch,f1_score , best_epoch,best_f1))
+        txt_path = '%s.csv'%checkpoint_path
+        text_file = open(txt_path, "a")
+        today =str(datetime.datetime.now())  
+        text_file.write( '%d,%.4f,%.4f,%.4f,%s\n'%(epoch,f1_score,valid_loss,n_loss,today))
         text_file.close()
         save_checkpoint('%s_final.pth'%checkpoint_path ,model ,optimizer )
 
@@ -133,6 +175,27 @@ def cut_train_val (total_len, train_len):
     np.save('train.npy', train_index)
     np.save('valid.npy', valid_index)
     return train_index , valid_index
+def cut_feat_gt_with_bbox(feat,gt,fp,x,y,z,bbox):
+    min_x = bbox.loc[fp]['min_x']
+    min_y = bbox.loc[fp]['min_y']
+    min_z = bbox.loc[fp]['min_z']
+    max_x = bbox.loc[fp]['max_x']
+    max_y = bbox.loc[fp]['max_y']
+    max_z = bbox.loc[fp]['max_z']
+    middle_x = (max_x+min_x)//2
+    middle_y = (max_y+min_y)//2
+    middle_z = (max_z+min_z)//2
+    half_x_length = x//2 
+    half_y_length = y//2 
+    half_z_length = z//2 
+    mid_x = np.random.randint(middle_x-8,middle_x+8)
+    mid_y = np.random.randint(middle_y-8,middle_y+8)
+    mid_z = np.random.randint(middle_z-8,middle_z+8)
+    # print(mid_x,mid_y,mid_z)
+    feat_cut = feat[:,:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
+    gt_cut   = gt[:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
+    return feat_cut , gt_cut
+
 
 def normalize (ndarray):
     std = np.std(ndarray)
@@ -216,3 +279,28 @@ def test2 (model , dataloader ,X,Y,Z, x, y ,z) :
             print(idx, p.shape ,fs,end='\r')
         macro_f1 = macro_f1/len(dataloader)
     return macro_f1
+
+def test_with_bbox (model , dataloader,criterion,bbox ,X,Y,Z, x, y ,z):
+    model.eval()
+    macro_f1 = 0    
+    total_loss = 0
+    with torch.no_grad():
+        for idx ,data in enumerate (dataloader):
+            feat = data[0]
+            gt     = data[1]
+            fp     = data[2]
+            feat = feat.cuda()
+            gt     = gt.cuda()
+            feat_cut ,gt_cut = cut_feat_gt_with_bbox(feat,gt,fp,x,y,z,bbox)
+            pred = model(feat_cut)
+            loss   = criterion(pred.double(),gt_cut)
+            pred = torch.argmax(pred,1).cpu()
+            pred   = pred.cpu().numpy().reshape(-1)
+            gt_cut = gt_cut.cpu().numpy().reshape(-1)
+            fs = f1_score(gt_cut, pred,average='macro')
+            print(idx , fs,end='\r')
+            macro_f1+=fs
+            total_loss+=loss
+    macro_f1 = macro_f1/len(dataloader)
+    total_loss = total_loss/len(dataloader)
+    return macro_f1 ,total_loss

@@ -90,3 +90,34 @@ for i,(label,abs_path) in enumerate(train_loader):
         
         text_file.write('%s,%d,%d,%d,%d,%d,%d,%d,%d\n'%(abs_path[0],k,with_label,min_x,max_x,min_y,max_y,max_x-min_x,max_y-min_y))
 text_file.close()
+
+
+def style1 ():
+    txt_path = 'tumor_analysis_2d_xy_plane_z_axis.csv'
+    text_file = open(txt_path, "w")
+    text_file.write( 'file_name,z,label,min_x,max_x,min_y,max_y,x_size,y_size,\n')
+    for i,(label,abs_path) in enumerate(train_loader):
+        
+        for k in range (0,label.shape[3]):
+            min_x = 0  ; min_y = 0 ; max_x = 0 ; max_y = 0
+            with_label = 0
+            for i in range (0,label.shape[1]):        
+                if(label[0,i,:,k].sum()>0):
+                    min_x = i
+                    with_label = 1
+                    break  
+            for i in range (label.shape[1]-1,-1,-1):
+                if(label[0,i,:,k].sum()>0):
+                    max_x = i
+                    break
+            for i in range (0,label.shape[2]):
+                if(label[0,:,i,k].sum()>0):
+                    min_y = i
+                    break    
+            for i in range (label.shape[2]-1,-1,-1):
+                if(label[0,:,i,k].sum()>0):
+                    max_y = i
+                    break
+            
+            text_file.write('%s,%d,%d,%d,%d,%d,%d,%d,%d\n'%(abs_path[0],k,with_label,min_x,max_x,min_y,max_y,max_x-min_x,max_y-min_y))
+    text_file.close()

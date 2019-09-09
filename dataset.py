@@ -45,7 +45,7 @@ class tumor_dataset(Dataset):
         elif(self.read_label==False):
             return feat
         else:
-            return feat ,gt
+            return feat ,gt,self.list[self.out_index[index]]
     def __len__(self):
         """ Total number of samples in the dataset """
         return self.len
