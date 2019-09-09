@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import datetime
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
@@ -38,7 +39,8 @@ def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,
         print('[%d] : %.4f      --BEST--[%d] : %.4f                         '%(epoch,f1_score , best_epoch,best_f1))
         txt_path = '%s.csv'%checkpoint_path
         text_file = open(txt_path, "a")
-        text_file.write( '%d,%.4f\n'%(epoch,f1_score))
+        today =str(datetime.datetime.now())  
+        text_file.write( '%d,%.4f,%s\n'%(epoch,f1_score,today))
         text_file.close()
         save_checkpoint('%s_final.pth'%checkpoint_path ,model ,optimizer )
 
