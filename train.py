@@ -42,7 +42,7 @@ def train(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,x,
         txt_path = '%s.csv'%checkpoint_path
         text_file = open(txt_path, "a")
         today =str(datetime.datetime.now())  
-        text_file.write( '%d,%.4f,%s\n'%(epoch,f1_score,today))
+        text_file.write( '%d,%.4f,%.4f,%s\n'%(epoch,f1_score,n_loss,today))
         text_file.close()
         save_checkpoint('%s_final.pth'%checkpoint_path ,model ,optimizer )
 
@@ -57,7 +57,7 @@ def train2(model,optimizer, dataloader,valid_loader ,criterion,checkpoint_path,b
             feat = data[0]
             gt     = data[1]
             fp     = data[2]
-            feat_cut ,gt_cut = cut_feat_gt_with_bbox(feat,gt,fp,x,y,z,bbox_csv)                
+            feat_cut ,gt_cut = cut_feat_gt_with_bbox(feat,gt,fp,x,y,z,bbox_csv)    
             feat_cut = feat_cut.cuda()
             gt_cut   = gt_cut.cuda()
             # print(feat_cut.shape,gt_cut.shape)
@@ -191,6 +191,19 @@ def cut_feat_gt_with_bbox(feat,gt,fp,x,y,z,bbox):
     mid_x = np.random.randint(middle_x-8,middle_x+8)
     mid_y = np.random.randint(middle_y-8,middle_y+8)
     mid_z = np.random.randint(middle_z-8,middle_z+8)
+    if(mid_x-half_x_length<0):
+        mid_x=half_x_length
+    if(mid_x+half_x_length>239):
+        mid_x=239-half_x_length
+    if(mid_y-half_x_length<0):
+        mid_y=half_x_length
+    if(mid_y+half_x_length>239):
+        mid_y=239-half_x_length
+    if(mid_z-half_x_length<0):
+        mid_z=half_x_length
+    if(mid_z+half_x_length>154):
+        mid_z=154-half_x_length
+
     # print(mid_x,mid_y,mid_z)
     feat_cut = feat[:,:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
     gt_cut   = gt[:,mid_x-half_x_length:mid_x+half_x_length,mid_y-half_y_length:mid_y+half_y_length,mid_z-half_z_length:mid_z+half_z_length]
@@ -231,7 +244,9 @@ def test2 (model , dataloader ,X,Y,Z, x, y ,z) :
     model.eval()
     macro_f1 = 0
     with torch.no_grad():
-        for idx ,(feat,gt) in enumerate (dataloader):
+        for idx ,data in enumerate (dataloader):
+            feat = data[0]
+            gt     = data[1]
             feat = feat.cuda()
             p = np.zeros((1,)) 
             g = np.zeros((1,))

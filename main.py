@@ -24,16 +24,18 @@ train_path = '../brats18_data/train_2/'
 type1 = ['flair','t1','t1ce','t2']
 
 train_index = np.load('trainval_cut/train5.npy')
-train_index = train_index[:2]
+
 valid_index = np.load('trainval_cut/valid5.npy')
-valid_index = valid_index[:2]
+
+# train_index = train_index[:2]
+# valid_index = valid_index[:2]
 
 workers = 2
 classes = 5
 n_epochs    = 100
 abs_path = '/tmp2/ryhu1014/'
 abs_path = ''
-model_name = '128^3_b1_shuf_t1_cv5'
+model_name = '128^3_b1_shuf_t1_bbox_cv5'
 model_name = 'testeeeee'
 
 os.makedirs(abs_path+model_name,exist_ok=True)
@@ -42,8 +44,8 @@ restart = False
 batch_size = 1
 workers = 2
 classes = 5
-x = 64 ; y = 64 ; z = 64
-n_epochs    = 100
+x = 128 ; y = 128 ; z = 128
+n_epochs    = 500
 
 bbox_csv_path = 'tumor_analysis.csv'
 bbox_csv = pd.read_csv(bbox_csv_path )
@@ -58,10 +60,11 @@ valid_loader = DataLoader(valid_set, batch_size=1,shuffle=False, num_workers=wor
 model =UNet3d(4,5)
 model.cuda()
 optimizer = torch.optim.Adam(model.parameters(),lr=0.00001,betas=(0.5, 0.999))
-criterion = loss_3d_crossentropy(classes,x,y,z)
+# criterion = loss_3d_crossentropy(classes,x,y,z)
+criterion = F1_Loss()
 if(restart==True):
     load_path = checkpoint_path+'_final.pth'
     load_checkpoint(load_path,model,optimizer)
 
-# train(model,optimizer, train_loader,valid_loader ,criterion,checkpoint_path,x,y,z,n_epochs = 100 , times = 1  )
-train2(model,optimizer, train_loader,valid_loader ,criterion,checkpoint_path,bbox_csv,x,y,z,n_epochs = 500 , times = 1  )
+train(model,optimizer, train_loader,valid_loader ,criterion,checkpoint_path,x,y,z,n_epochs = 100 , times = 1  )
+# train2(model,optimizer, train_loader,valid_loader ,criterion,checkpoint_path,bbox_csv,x,y,z,n_epochs = n_epochs , times = 1  )
